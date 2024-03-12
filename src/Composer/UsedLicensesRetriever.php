@@ -30,8 +30,9 @@ class UsedLicensesRetriever
             throw new ProcessFailedException($process);
         }
 
-        /** @var array{dependencies:array<string,array{version:string,license:list<string>}>} */
-        self::$output = json_decode($process->getOutput(), true);
+        /** @var array{dependencies:array<string,array{version:string,license:list<string>}>} $output */
+        $output = json_decode($process->getOutput(), true);
+        self::$output = $output;
         return self::$output;
     }
 }
