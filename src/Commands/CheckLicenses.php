@@ -9,6 +9,7 @@ use LicenseChecker\Commands\Output\TableRenderer;
 use LicenseChecker\Composer\DependencyTree;
 use LicenseChecker\Composer\UsedLicensesParser;
 use LicenseChecker\Configuration\AllowedLicensesParser;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -17,10 +18,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Yaml\Exception\ParseException;
 
+#[AsCommand(name: 'check')]
 class CheckLicenses extends Command
 {
-    protected static $defaultName = 'check';
-
     public function __construct(
         private readonly UsedLicensesParser $usedLicensesParser,
         private readonly AllowedLicensesParser $allowedLicensesParser,
@@ -32,14 +32,14 @@ class CheckLicenses extends Command
 
     protected function configure(): void
     {
-        $this->setDescription('Check licenses of composer dependencies');
-        $this->addOption('no-dev', null, InputOption::VALUE_NONE, 'Do not include dev dependencies');
-        $this->addOption(
-            'filename',
-            'f',
-            InputOption::VALUE_OPTIONAL,
-            'Optional filename to be used instead of the default'
-        );
+        $this->setDescription('Check licenses of composer dependencies')
+            ->addOption('no-dev', null, InputOption::VALUE_NONE, 'Do not include dev dependencies')
+            ->addOption(
+                'filename',
+                'f',
+                InputOption::VALUE_OPTIONAL,
+                'Optional filename to be used instead of the default'
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -50,7 +50,7 @@ class CheckLicenses extends Command
             $usedLicenses = $this->usedLicensesParser->parseLicenses((bool)$input->getOption('no-dev'));
         } catch (ProcessFailedException $e) {
             $output->writeln($e->getMessage());
-            return 1;
+            return Command::FAILURE;
         }
 
         try {
@@ -59,7 +59,7 @@ class CheckLicenses extends Command
             $allowedLicenses = $this->allowedLicensesParser->getAllowedLicenses($fileName);
         } catch (ParseException $e) {
             $output->writeln($e->getMessage());
-            return 1;
+            return Command::FAILURE;
         }
 
         $notAllowedLicenses = array_diff($usedLicenses, $allowedLicenses);
@@ -81,6 +81,6 @@ class CheckLicenses extends Command
 
         $this->tableRenderer->renderDependencyChecks($dependencyChecks, $io);
 
-        return empty($notAllowedLicenses) ? 0 : 1;
+        return empty($notAllowedLicenses) ? Command::SUCCESS : Command::FAILURE;
     }
 }
